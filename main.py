@@ -325,7 +325,8 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
             "user_id": current_user_id,
             "content": request.content,
         }
-        supabase.table("comments").insert(comment_data).execute()
+        insert_response = supabase.table("comments").insert(comment_data).execute()
+        added_comment = insert_response.data[0]
 
         # 通知を作成
         post_response = supabase.table("post").select("user_id").eq("post_id", post_id).execute()
@@ -340,7 +341,7 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
         }
         supabase.table("notifications").insert(notification_data).execute()
 
-        return {"message": "コメントを追加しました"}
+        return {"comment": added_comment}
 
     elif request.action == "toggle_star":
         # スターのトグル
@@ -351,8 +352,9 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
             raise HTTPException(status_code=404, detail="投稿が見つかりません")
         post = post_response.data[0]
         star_count = post["star_count"]
+        starred = bool(star_entry.data)
 
-        if star_entry.data:
+        if starred:
             supabase.table("stars").delete().eq("user_id", current_user_id).eq("post_id", post_id).execute()
             star_count -= 1
         else:
@@ -361,4 +363,4 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
 
         supabase.table("post").update({"star_count": star_count}).eq("post_id", post_id).execute()
 
-        return {"star_count": star_count}
+        return {"star_count": star_count, "starred": starred}
