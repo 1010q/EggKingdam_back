@@ -79,7 +79,10 @@ async def logout_user(token: str = Depends(oauth2_scheme)):
 
 @app.post("/material/input/allmodel")
 async def get_model( request: MaterialInput, token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
     response = supabase.table("allmodel").select("*").execute()
@@ -103,7 +106,10 @@ async def get_model( request: MaterialInput, token: str = Depends(oauth2_scheme)
 
 @app.post("/material/input/eachmodel")
 async def get_model(request: MaterialInput, token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     user_id = user_response.user.id
     try:
         response = supabase.table("eachmodel").select("*").filter("user_id", "eq", user_id).execute()
@@ -158,7 +164,10 @@ async def get_model(request: MaterialInput, token: str = Depends(oauth2_scheme))
 
 @app.post("/user/TKG/rating")
 async def rating(request: Rating, token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
     (supabase.table("eachmodel").insert({
@@ -181,7 +190,10 @@ async def rating(request: Rating, token: str = Depends(oauth2_scheme)):
 
 @app.post("/add/eachmodel")
 async def add_eachmodel(request: Rating, token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     user_id = user_response.user.id
     response = (supabase.table("eachmodel").insert({
             "user_id": user_id,
@@ -196,7 +208,10 @@ async def add_eachmodel(request: Rating, token: str = Depends(oauth2_scheme)):
 
 @app.get("/")
 async def home(token: str = Depends(oauth2_scheme), sort_by: str = Query("created_at", enum=["created_at", "star_count"])):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
     
     user_data = supabase.table("profile").select("username", "image_url").eq("user_id", current_user_id).execute()
@@ -224,7 +239,10 @@ async def home(token: str = Depends(oauth2_scheme), sort_by: str = Query("create
 
 @app.get("/profile/{user_id}")
 async def get_profile(user_id: str, token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
     if current_user_id != user_id:
@@ -254,7 +272,10 @@ async def get_profile(user_id: str, token: str = Depends(oauth2_scheme)):
 
 @app.patch("/profile/{user_id}")
 async def update_profile(user_id: str, username: str = Form(None), user_image: UploadFile = Form(None), token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
     if current_user_id != user_id:
@@ -279,7 +300,10 @@ async def update_profile(user_id: str, username: str = Form(None), user_image: U
 
 @app.post("/post/create")
 async def create_post(title: str = Form(...), description: str = Form(...), image: UploadFile = File(...), token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     user_id = user_response.user.id
     image_path = f"posts/{uuid4()}"
     file_content = await image.read()
@@ -300,7 +324,10 @@ async def create_post(title: str = Form(...), description: str = Form(...), imag
 
 @app.post("/postdetail/{post_id}")
 async def handle_post_action(post_id: str, request: PostActionRequest, token: str = Depends(oauth2_scheme)):
-    user_response = supabase.auth.get_user(token)
+    try:
+        user_response = supabase.auth.get_user(token)
+    except Exception as e:
+        raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
     if request.action == "get_post":
