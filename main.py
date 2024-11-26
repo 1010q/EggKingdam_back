@@ -252,9 +252,6 @@ async def get_profile(user_id: str, token: str = Depends(oauth2_scheme)):
         raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
-    if current_user_id != user_id:
-        raise HTTPException(status_code=403, detail="Unauthorized to access this profile")
-
     user_data = supabase.table("profile").select("username", "image_url").eq("user_id", user_id).execute()
     if not user_data.data:
         raise HTTPException(status_code=404, detail="Profile not found")
