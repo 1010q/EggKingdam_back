@@ -6,8 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 import numpy as np
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.linear_model import LinearRegression
+from fastapi.responses import FileResponse
+import matplotlib.pyplot as plt
 from uuid import uuid4
 from dotenv import load_dotenv
+from io import BytesIO
 import os
 
 load_dotenv()
@@ -125,12 +128,12 @@ async def get_model(request: MaterialInput, token: str = Depends(oauth2_scheme))
     except Exception as e:
         data_count = 0
 
-    X = np.array([[180, 72, 4],[200, 66, 5],[180, 72, 6],[240, 66, 5],[180, 60, 8],[180, 72, 4]])
-    y = np.array([5.8, 7.0, 7.0, 7.1, 8.0, 5.0])
+    X = np.array([[180, 72, 4],[200, 66, 5],[180, 72, 6],[240, 66, 5],[180, 60, 8],[180, 72, 4],[50, 60, 5],[50, 66, 5],[50, 72, 5],[500, 60, 5],[500, 66, 5],[500, 72, 5]])
+    y = np.array([5.8, 7.0, 7.0, 7.1, 8.0, 5.0, 3.8, 3.9, 4.0, 15.5, 15.8, 16.1])
     if data_count == 0:
         pass
 
-    elif data_count < 5: # データが少なければ、デフォルトデータと重み付きユーザーデータを使用
+    elif data_count < 8: # データが少なければ、デフォルトデータと重み付きユーザーデータを使用
         user_X = np.array([[d["rice_amount"], d["egg_amount"], d["rating"]] for d in data])
         user_y = np.array([d["soysauce_amount"] for d in data])
 
@@ -191,8 +194,71 @@ async def rating(request: Rating, token: str = Depends(oauth2_scheme)):
         "soysauce_amount": request.soysauce_amount,
         "rating": request.rating,
     }).execute())
-    
-    return {"message": "評価を保存しました"}
+
+    response = supabase.table("eachmodel").select("*").filter("user_id", "eq", current_user_id).execute()
+    data = response.data
+    X = np.array([[d["rice_amount"], d["egg_amount"], d["rating"]] for d in data])
+    y = np.array([d["soysauce_amount"] for d in data])
+
+    poly = PolynomialFeatures(degree=2)
+    X_poly = poly.fit_transform(X)
+    model = LinearRegression()
+    model.fit(X_poly, y)
+
+    rice_range = np.arange(50, 500, 50)  # ご飯の量の範囲（50g単位）
+    new_data = np.array([[rice, 66, 5] for rice in rice_range])
+    new_data_poly = poly.transform(new_data)
+    predicted_soy_sauce = model.predict(new_data_poly)
+
+    plt.figure(figsize=(4, 4))
+    plt.plot(rice_range, predicted_soy_sauce, color='y')
+    plt.grid(True)
+
+    image_path = f"eachmodel/{uuid4()}.png"
+    image_stream = BytesIO()
+    plt.savefig(image_stream, format='png')
+    image_stream.seek(0)
+    file_content = image_stream.read()
+    supabase.storage.from_("eachmodel_image").upload(image_path, file_content, {"content-type": "image/png"})
+
+    image_url = f"{SUPABASE_URL}/storage/v1/object/public/eachmodel_image/{image_path}"
+    supabase.table("profile").update({"eachmodel_image": image_url}).execute()
+
+    return {"image_url": image_url}
+
+
+@app.get("/allmodel_plot")
+async def allmodel_plot():
+    response = supabase.table("allmodel").select("*").execute()
+    data = response.data
+    X = np.array([[d["rice_amount"], d["egg_amount"], d["rating"]] for d in data])
+    y = np.array([d["soysauce_amount"] for d in data])
+
+    poly = PolynomialFeatures(degree=2)
+    X_poly = poly.fit_transform(X)
+    model = LinearRegression()
+    model.fit(X_poly, y)
+
+    rice_range = np.arange(50, 500, 50)  # ご飯の量の範囲（50g単位）
+    new_data = np.array([[rice, 66, 5] for rice in rice_range])
+    new_data_poly = poly.transform(new_data)
+    predicted_soy_sauce = model.predict(new_data_poly)
+
+    plt.figure(figsize=(4, 4))
+    plt.plot(rice_range, predicted_soy_sauce, color='y')
+    plt.grid(True)
+
+    image_path = f"allmodel/{uuid4()}.png"
+    image_stream = BytesIO()
+    plt.savefig(image_stream, format='png')
+    image_stream.seek(0)
+    file_content = image_stream.read()
+    supabase.storage.from_("allmodel_image").upload(image_path, file_content, {"content-type": "image/png"})
+
+    image_url = f"{SUPABASE_URL}/storage/v1/object/public/allmodel_image/{image_path}"
+    supabase.table("allmodel_image").insert({"image_url": image_url}).execute()
+
+    return {"image_url": image_url}
 
 
 @app.post("/add/eachmodel")
@@ -224,6 +290,7 @@ async def home(token: str = Depends(oauth2_scheme), sort_by: str = Query("create
     user_data = supabase.table("profile").select("username", "image_url").eq("user_id", current_user_id).execute()
     username = user_data.data[0]["username"]
     image_url = user_data.data[0]["image_url"]
+    eachmodel_image = user_data.data[0]["eachmodel_image"]
 
     response = supabase.table("notifications").select("*").eq("user_id", current_user_id).execute()
     notifications = response.data
@@ -235,12 +302,16 @@ async def home(token: str = Depends(oauth2_scheme), sort_by: str = Query("create
     
     posts = posts_response.data
 
+    allmodel_image_data = supabase.table("allmodel_image").select("image_url").order("id", desc=True).limit(1).execute()
+
     return {
             "user_id": current_user_id, 
             "username": username, 
             "user_image_url": image_url, 
             "posts": posts, 
-            "notifications": notifications
+            "notifications": notifications,
+            "eachmodel_image": eachmodel_image,
+            "allmodel_image": allmodel_image_data.data[0]["image_url"],
         }
 
 
