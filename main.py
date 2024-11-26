@@ -53,7 +53,7 @@ async def login_user(request: Signin):
     auth_response = supabase.auth.sign_in_with_password({"email": request.email,"password": request.password,})
     user_id = auth_response.user.id
     response = supabase.table("profile").select("*").eq("user_id", user_id).execute()
-    profile_data = response.data
+    profile_data = response.data[0]
 
     return {"access_token": auth_response.session.access_token, "token_type": "bearer", "user_id": profile_data["user_id"], "username": profile_data["username"], "image_url": profile_data["image_url"],}
 
