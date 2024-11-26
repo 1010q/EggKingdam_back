@@ -51,8 +51,11 @@ class PostActionRequest(BaseModel):
 @app.post("/login")
 async def login_user(request: Signin):
     auth_response = supabase.auth.sign_in_with_password({"email": request.email,"password": request.password,})
+    user_id = auth_response.user.id
+    response = supabase.table("profile").select("*").eq("id", user_id).execute()
+    profile_data = response.data
 
-    return {"access_token": auth_response.session.access_token, "token_type": "bearer"}
+    return {"access_token": auth_response.session.access_token, "token_type": "bearer", "user_id": profile_data["user_id"], "username": profile_data["username"], "image_url": profile_data["image_url"],}
 
 
 @app.post("/register")
@@ -67,7 +70,7 @@ async def register_user(request: Signup):
         "image_url": "https://vsmlnrzidfzdmvawficj.supabase.co/storage/v1/object/public/post_image/profile_images/d5c2c64f-eef3-4744-a3cf-caa0ff947749"
     }).execute()
     access_token = sign_in_response.session.access_token
-    return {"access_token": access_token, "token_type": "bearer"}
+    return {"access_token": access_token, "token_type": "bearer", "user_id": user_id, "username": request.username, "image_url": "https://vsmlnrzidfzdmvawficj.supabase.co/storage/v1/object/public/post_image/profile_images/d5c2c64f-eef3-4744-a3cf-caa0ff947749"}
 
 
 @app.post("/logout")
