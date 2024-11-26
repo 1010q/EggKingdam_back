@@ -287,7 +287,7 @@ async def home(token: str = Depends(oauth2_scheme), sort_by: str = Query("create
         raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
     
-    user_data = supabase.table("profile").select("username", "image_url").eq("user_id", current_user_id).execute()
+    user_data = supabase.table("profile").select("*").eq("user_id", current_user_id).execute()
     username = user_data.data[0]["username"]
     image_url = user_data.data[0]["image_url"]
     eachmodel_image = user_data.data[0]["eachmodel_image"]
