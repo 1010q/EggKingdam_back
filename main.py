@@ -32,6 +32,8 @@ class Signup(BaseModel):
     email: str
     password: str
     username: str
+    is_man: bool = None
+    age: int = None
 
 class MaterialInput(BaseModel):
     rice_amount: int
@@ -67,10 +69,12 @@ async def register_user(request: Signup):
     supabase.table("profile").insert({
         "user_id": user_id,
         "username": request.username,
-        "image_url": "https://vsmlnrzidfzdmvawficj.supabase.co/storage/v1/object/public/post_image/profile_images/d5c2c64f-eef3-4744-a3cf-caa0ff947749"
+        "image_url": "https://vsmlnrzidfzdmvawficj.supabase.co/storage/v1/object/public/post_image/profile_images/d5c2c64f-eef3-4744-a3cf-caa0ff947749",
+        "is_man": request.is_man,
+        "age": request.age 
     }).execute()
     access_token = sign_in_response.session.access_token
-    return {"access_token": access_token, "token_type": "bearer", "user_id": user_id, "username": request.username, "image_url": "https://vsmlnrzidfzdmvawficj.supabase.co/storage/v1/object/public/post_image/profile_images/d5c2c64f-eef3-4744-a3cf-caa0ff947749"}
+    return {"access_token": access_token, "token_type": "bearer", "user_id": user_id, "username": request.username, "image_url": "https://vsmlnrzidfzdmvawficj.supabase.co/storage/v1/object/public/post_image/profile_images/d5c2c64f-eef3-4744-a3cf-caa0ff947749", "is_man": request.is_man, "age": request.age}
 
 
 @app.post("/logout")
@@ -274,7 +278,7 @@ async def get_profile(user_id: str, token: str = Depends(oauth2_scheme)):
     }
 
 @app.patch("/profile/{user_id}")
-async def update_profile(user_id: str, username: str = Form(None), user_image: UploadFile = Form(None), token: str = Depends(oauth2_scheme)):
+async def update_profile(user_id: str, username: str = Form(None), user_image: UploadFile = Form(None), is_man: bool = Form(None), age: int = Form(None), token: str = Depends(oauth2_scheme)):
     try:
         user_response = supabase.auth.get_user(token)
     except Exception as e:
@@ -294,6 +298,12 @@ async def update_profile(user_id: str, username: str = Form(None), user_image: U
         response = supabase.storage.from_("post_image").upload(image_path, image_content, {"content-type": "image/png"})
         image_url = f"{SUPABASE_URL}/storage/v1/object/public/post_image/{image_path}"
         updated_data["image_url"] = image_url
+
+    if is_man:
+        updated_data["is_man"] = is_man
+
+    if age:
+        updated_data["age"] = age
 
     if updated_data:
         supabase.table("profile").update(updated_data).eq("user_id", user_id).execute()
