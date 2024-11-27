@@ -279,7 +279,7 @@ async def add_eachmodel(request: Rating, token: str = Depends(oauth2_scheme)):
     response = supabase.table("eachmodel").select("*").filter("user_id", "eq", current_user_id).execute()
     data = response.data
     data_count = len(data)
-    if data_count < 5:
+    if data_count > 5:
         X = np.array([[d["rice_amount"], d["egg_amount"], d["rating"]] for d in data])
         y = np.array([d["soysauce_amount"] for d in data])
 
@@ -339,7 +339,7 @@ async def home(token: str = Depends(oauth2_scheme), sort_by: str = Query("create
             "user_id": current_user_id, 
             "username": username, 
             "user_image_url": image_url, 
-            "posts": posts, 
+            "posts": posts,
             "notifications": notifications,
             "eachmodel_image": eachmodel_image,
             "allmodel_image": allmodel_image_data.data[0]["image_url"],
