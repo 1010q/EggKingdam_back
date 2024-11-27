@@ -304,7 +304,7 @@ async def add_eachmodel(request: Rating, token: str = Depends(oauth2_scheme)):
         file_content = image_stream.read()
         supabase.storage.from_("eachmodel_image").upload(image_path, file_content, {"content-type": "image/png"})
 
-        image_url = f"{SUPABASE_URL}/storage/v1/object/public/eachmodel_image/{image_path}"
+        image_url = f"{SUPABASE_URL}/storage/v1/object/public/eachmodel_image/{uuid4()}/{image_path}"
         supabase.table("profile").update({"eachmodel_image": image_url}).eq("user_id", current_user_id).execute()
 
     return {"message": "評価を保存しました"}
