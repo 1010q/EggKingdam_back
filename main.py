@@ -278,32 +278,34 @@ async def add_eachmodel(request: Rating, token: str = Depends(oauth2_scheme)):
     
     response = supabase.table("eachmodel").select("*").filter("user_id", "eq", current_user_id).execute()
     data = response.data
-    X = np.array([[d["rice_amount"], d["egg_amount"], d["rating"]] for d in data])
-    y = np.array([d["soysauce_amount"] for d in data])
+    data_count = len(data)
+    if data_count < 5:
+        X = np.array([[d["rice_amount"], d["egg_amount"], d["rating"]] for d in data])
+        y = np.array([d["soysauce_amount"] for d in data])
 
-    poly = PolynomialFeatures(degree=2)
-    X_poly = poly.fit_transform(X)
-    model = LinearRegression()
-    model.fit(X_poly, y)
+        poly = PolynomialFeatures(degree=2)
+        X_poly = poly.fit_transform(X)
+        model = LinearRegression()
+        model.fit(X_poly, y)
 
-    rice_range = np.arange(50, 500, 50)  # ご飯の量の範囲（50g単位）
-    new_data = np.array([[rice, 66, 5] for rice in rice_range])
-    new_data_poly = poly.transform(new_data)
-    predicted_soy_sauce = model.predict(new_data_poly)
+        rice_range = np.arange(50, 500, 50)  # ご飯の量の範囲（50g単位）
+        new_data = np.array([[rice, 66, 5] for rice in rice_range])
+        new_data_poly = poly.transform(new_data)
+        predicted_soy_sauce = model.predict(new_data_poly)
 
-    plt.figure(figsize=(4, 4))
-    plt.plot(rice_range, predicted_soy_sauce, color='y')
-    plt.grid(True)
+        plt.figure(figsize=(4, 4))
+        plt.plot(rice_range, predicted_soy_sauce, color='y')
+        plt.grid(True)
 
-    image_path = f"eachmodel/{uuid4()}.png"
-    image_stream = BytesIO()
-    plt.savefig(image_stream, format='png')
-    image_stream.seek(0)
-    file_content = image_stream.read()
-    supabase.storage.from_("eachmodel_image").upload(image_path, file_content, {"content-type": "image/png"})
+        image_path = f"eachmodel/{uuid4()}.png"
+        image_stream = BytesIO()
+        plt.savefig(image_stream, format='png')
+        image_stream.seek(0)
+        file_content = image_stream.read()
+        supabase.storage.from_("eachmodel_image").upload(image_path, file_content, {"content-type": "image/png"})
 
-    image_url = f"{SUPABASE_URL}/storage/v1/object/public/eachmodel_image/{image_path}"
-    supabase.table("profile").update({"eachmodel_image": image_url}).eq("user_id", current_user_id).execute()
+        image_url = f"{SUPABASE_URL}/storage/v1/object/public/eachmodel_image/{image_path}"
+        supabase.table("profile").update({"eachmodel_image": image_url}).eq("user_id", current_user_id).execute()
 
     return {"message": "評価を保存しました"}
 
