@@ -442,8 +442,8 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
         raise HTTPException(status_code=403)
     current_user_id = user_response.user.id
 
-    if request.action == "get_post":
-        # 投稿詳細とコメントを取得
+    if request.action == "get_post":# 投稿詳細とコメントを取得
+
         response = supabase.table("post").select("*").eq("post_id", post_id).execute()
         if not response.data:
             raise HTTPException(status_code=404, detail="投稿が見つかりません")
@@ -453,9 +453,10 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
         comments = comment_response.data
 
         return {"post": post_detail, "comments": comments}
+    
 
-    elif request.action == "add_comment":
-        # コメントを追加
+    elif request.action == "add_comment":# コメントを追加
+
         if not request.content:
             raise HTTPException(status_code=400, detail="コメント内容が必要です")
 
@@ -481,9 +482,10 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
         supabase.table("notifications").insert(notification_data).execute()
 
         return {"comment": added_comment}
+    
 
-    elif request.action == "toggle_star":
-        # スターのトグル
+    elif request.action == "toggle_star":# スターのトグル
+
         star_entry = supabase.table("stars").select("id").eq("user_id", current_user_id).eq("post_id", post_id).execute()
 
         post_response = supabase.table("post").select("star_count").eq("post_id", post_id).execute()
@@ -503,3 +505,27 @@ async def handle_post_action(post_id: str, request: PostActionRequest, token: st
         supabase.table("post").update({"star_count": star_count}).eq("post_id", post_id).execute()
 
         return {"star_count": star_count, "starred": starred}
+    
+    
+    elif request.action == "post_delete":  # 投稿を削除
+        # 投稿の存在確認
+        post_response = supabase.table("post").select("user_id").eq("post_id", post_id).execute()
+        if not post_response.data:
+            raise HTTPException(status_code=404, detail="投稿が見つかりません")
+
+        post = post_response.data[0]
+
+        # ユーザーが投稿の所有者であることを確認
+        if post["user_id"] != current_user_id:
+            raise HTTPException(status_code=403, detail="この投稿を削除する権限がありません")
+
+        # 投稿を削除
+        supabase.table("post").delete().eq("post_id", post_id).execute()
+
+        # 関連するコメントを削除
+        supabase.table("comments").delete().eq("post_id", post_id).execute()
+
+        # 関連する通知を削除
+        supabase.table("notifications").delete().eq("post_id", post_id).execute()
+
+        return {"message": "投稿が削除されました"}
